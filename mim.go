@@ -55,6 +55,32 @@ func (l *logger) log(direction []byte, data []byte) {
 	}
 }
 
+func (l *logger) logErrorNExit(data []byte) {
+	l.lock.Lock()
+	defer l.lock.Unlock()
+	write := func(d []byte) {
+		_, err := l.file.Write(d)
+		if err != nil {
+			fmt.Println("Logging error:", err.Error())
+			fmt.Println("Exiting application.")
+			os.Exit(1)
+		}
+	}
+	write([]byte(time.Now().String()))
+	write(seperator)
+	write(errorString)
+	write([]byte("Exiting application."))
+	write(seperator)
+	write(data)
+	write(newLine)
+	if err := l.file.Sync(); err != nil {
+		fmt.Println("Syncing error:", err.Error())
+		fmt.Println("Exiting application.")
+		os.Exit(1)
+	}
+	os.Exit(1)
+}
+
 func (l *logger) logInfo(data []byte) {
 	l.log(infoString, data)
 }
@@ -75,7 +101,7 @@ func (m *MIM) Start(port string, destHostPort string) {
 	logger.logInfo([]byte("Starting listener on port: " + port))
 	l, err := net.Listen("tcp", port)
 	if err != nil {
-		logger.logError([]byte("Error starting listener on port: " + port + " error: " + err.Error()))
+		logger.logErrorNExit([]byte("Error starting listener on port: " + port + " error: " + err.Error()))
 		return
 	}
 
@@ -88,7 +114,7 @@ func handleAccept(logger *logger, sourceCon net.Conn, destHostPort string) {
 	logger.logInfo([]byte("Connecting to destination: " + destHostPort))
 	destCon, err := net.Dial("tcp", destHostPort)
 	if err != nil {
-		logger.logError([]byte("Error connecting " + destHostPort + " error: " + err.Error()))
+		logger.logErrorNExit([]byte("Error connecting " + destHostPort + " error: " + err.Error()))
 		return
 	}
 	logger.logInfo([]byte("Connection established to destination: " + destHostPort))

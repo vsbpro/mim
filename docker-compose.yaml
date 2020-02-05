@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  mim:
+    image: mim:latest
+    ports:
+      - 9080:8000
